@@ -17,6 +17,11 @@ class Meter():
     def __init__(self):
         metrics = self.metrics
 
+        metrics["last_update"] = prometheus_client.Gauge(
+            "hcmetrics_last_update", "Last update of metrics"
+        )
+
+
         metrics["values"] = prometheus_client.Gauge(
             "rego637_raw", "Value of index idx", ["idx"]
         )
@@ -134,14 +139,20 @@ class Meter():
                 else:
                     self.metrics[p].set(js[p]/10)
 
+        self.metrics["last_update"].set(time.time())
 
 def serve():
     meter = Meter()
+    meter.refresh_all_meters()
+
     prometheus_client.start_http_server(8010)
 
     while True:
         time.sleep(20)
-        meter.refresh_all_meters()
+        try:
+            meter.refresh_all_meters()
+        except OSError as e:
+            print(f"Ignoring exception {e}")
 
 
 if __name__ == "__main__":
